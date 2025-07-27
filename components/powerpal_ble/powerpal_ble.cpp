@@ -255,8 +255,9 @@ void Powerpal::parse_measurement_(const uint8_t *data, uint16_t length) {
   uint16_t pulses = uint16_t(data[4]) | (uint16_t(data[5]) << 8);
 
   // 5) Instantaneous power (W) using actual elapsed time
-  uint32_t interval_s = this->last_measurement_timestamp_s_ ? (t32 - this->last_measurement_timestamp_s_) : 0;
-  this->last_measurement_timestamp_s_ = t32;
+  static uint32_t last_timestamp_s = 0;
+  uint32_t interval_s = last_timestamp_s ? (t32 - last_timestamp_s) : 0;
+  last_timestamp_s = t32;
   if (interval_s == 0) {
     ESP_LOGD(TAG, "Skipping power calc on first measurement after reboot or rollover");
   } else {
