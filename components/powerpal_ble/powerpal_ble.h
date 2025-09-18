@@ -132,7 +132,6 @@ class Powerpal : public esphome::ble_client::BLEClientNode, public Component {
   void request_subscription_(const char *trigger_reason);
   void reset_connection_state_();
 
-
   bool authenticated_{false};
   bool pending_subscription_{false};
   bool subscription_in_progress_{false};
