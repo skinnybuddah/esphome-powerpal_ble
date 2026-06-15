@@ -1,0 +1,45 @@
+script:
+  - id: sync_powerpal_time
+    mode: restart
+    then:
+
+      # Wait for Home Assistant time (max 30s)
+      - wait_until:
+          condition:
+            lambda: 'return id(homeassistant_time).now().is_valid();'
+          timeout: 30s
+
+      # Wait for BLE connection (max 30s)
+      - wait_until:
+          condition:
+            lambda: 'return id(powerpal).is_connected();'
+          timeout: 30s
+
+      # Only sync if both are ready
+      - if:
+          condition:
+            lambda: |-
+              return id(homeassistant_time).now().is_valid() &&
+                     id(powerpal).is_connected();
+          then:
+            - logger.log: "Syncing Powerpal RTC time"
+
+            - ble_client.ble_write:
+                id: powerpal
+                service_uuid: '59DAABCD-12F4-25A6-7D4F-55961DCE4205'
+                characteristic_uuid: '59DA0004-12F4-25A6-7D4F-55961DCE4205'
+                value: !lambda |-
+                  uint32_t t = id(homeassistant_time).now().timestamp;
+                  return std::vector<uint8_t>{
+                    (uint8_t)(t),
+                    (uint8_t)(t >> 8),
+                    (uint8_t)(t >> 16),
+                    (uint8_t)(t >> 24)
+                  };
+
+          else:
+            - logger.log: "Skipping RTC sync (timeout or not connected)"
+
+            # Optional retry after 2 minutes
+            - delay: 2min
+            - script.execute: sync_powerpal_time
